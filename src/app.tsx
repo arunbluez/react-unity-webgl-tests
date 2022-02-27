@@ -1,6 +1,7 @@
 import "./app.css";
 import { Fragment, useEffect, useState } from "react";
 import Unity, { UnityContext } from "react-unity-webgl";
+import soulofoxLogo from "./assets/soulofox-logo.png"
 
 interface Vector2 {
   x: number;
@@ -13,11 +14,11 @@ const unityContext = new UnityContext({
   companyName: "Jeffrey Lanters",
   // The url's of the Unity WebGL runtime, these paths are public and should be
   // accessible from the internet and relative to the index.html.
-  loaderUrl: "unitybuild/2020.1/myunityapp.loader.js",
-  dataUrl: "unitybuild/2020.1/myunityapp.data",
-  frameworkUrl: "unitybuild/2020.1/myunityapp.framework.js",
-  codeUrl: "unitybuild/2020.1/myunityapp.wasm",
-  streamingAssetsUrl: "unitybuild/2020.1/streamingassets",
+  loaderUrl: "unitybuild/test/game-build.loader.js",
+  dataUrl: "unitybuild/test/game-build.data",
+  frameworkUrl: "unitybuild/test/game-build.framework.js",
+  codeUrl: "unitybuild/test/game-build.wasm",
+  streamingAssetsUrl: "unitybuild/test/streamingassets",
   // Additional configuration options.
   webglContextAttributes: {
     preserveDrawingBuffer: true,
@@ -34,19 +35,30 @@ function App() {
   const [saidMessage, setSaidMessage] = useState<string>("Nothing");
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [progression, setProgression] = useState<number>(0);
+  const [email, setEmail] = useState("")
+  const [walletAddress, setWalletAddress] = useState("")
+
 
   // When the component is mounted, we'll register some event listener.
   useEffect(() => {
+    
     unityContext.on("canvas", handleOnUnityCanvas);
     unityContext.on("progress", handleOnUnityProgress);
     unityContext.on("loaded", handleOnUnityLoaded);
     unityContext.on("RotationDidUpdate", handleOnUnityRotationDidUpdate);
     unityContext.on("ClickedPosition", handleOnUnityClickedPosition);
     unityContext.on("Say", handleOnUnitySayMessage);
+    unityContext.on("Connect", handleOnUnityConnect);
+    setTimeout(() => {
+      // @ts-ignore: Unreachable code error
+      window.unityInstance = unityContext.unityInstance;
+      console.log("unity instance loaded")
+    }, 5000);
     // When the component is unmounted, we'll unregister the event listener.
     return function () {
       unityContext.removeAllEventListeners();
     };
+
   }, []);
 
   // When the rotation speed has been updated, it will be sent to Unity.
@@ -54,9 +66,19 @@ function App() {
     unityContext.send("MeshCrate", "SetRotationSpeed", rotationSpeed);
   }, [rotationSpeed]);
 
+  useEffect(() => {
+    unityContext.send("Container - Login Code", "ReactEmailVerifySuccess", email);
+  }, [email]);
+
+  useEffect(() => {
+    if(walletAddress !== "")
+    unityContext.send("ButtonSendMessage", "SetAddress", walletAddress);
+  }, [walletAddress]);
+
   // Built-in event invoked when the Unity canvas is ready to be interacted with.
   function handleOnUnityCanvas(canvas: HTMLCanvasElement) {
     canvas.setAttribute("role", "unityCanvas");
+
   }
 
   // Built-in event invoked when the Unity app's progress has changed.
@@ -87,6 +109,14 @@ function App() {
     setSaidMessage(message);
   }
 
+  async function handleOnUnityConnect(message: string) {
+    console.log(message);
+    await checkIfWalletIsConnected()
+  }
+
+  function handleOnClickLogin(){
+    setEmail("arunbluez@gmail.com")
+  }
   // Event invoked when the user clicks the button, the speed will be increased.
   function handleOnClickIncreaseSpeed() {
     setRotationSpeed(rotationSpeed + 15);
@@ -106,22 +136,36 @@ function App() {
     setIsUnityMounted(isUnityMounted === false);
   }
 
+
+  const checkIfWalletIsConnected = async () => {
+    const windowObj:any = window;
+
+    if (windowObj.solana) {
+      const response = await windowObj.solana.connect();
+      console.log('Connected with Public Key:', response.publicKey.toString());
+      setWalletAddress(response.publicKey.toString());
+    }
+  };
+
+
+
   // This is the React component that will be rendering the Unity app.
   return (
     <Fragment>
       <div className="wrapper">
         {/* Introduction text */}
-        <h1>React Unity WebGL Tests</h1>
-        <p>
+        <img src={soulofoxLogo} />
+        <h1>Soulofox Test Build</h1>
+        {/* <p>
           In this React Application we'll explore the possibilities with the
           React Unity WebGL Module. Use the built-in events, custom events,
           mount, unmount, press the buttons and resize the view to see the magic
           in action.
-        </p>
+        </p> */}
         {/* Some buttons to interact */}
-        <button onClick={handleOnClickUnMountUnity}>(Un)mount Unity</button>
-        <button onClick={handleOnClickIncreaseSpeed}>Increase speed</button>
-        <button onClick={handleOnClickDecreaseSpeed}>Decrease speed</button>
+       <button onClick={handleOnClickLogin}>Login</button>
+         {/* <button onClick={handleOnClickIncreaseSpeed}>Increase speed</button>
+        <button onClick={handleOnClickDecreaseSpeed}>Decrease speed</button> */}
         {/* The Unity container */}
         {isUnityMounted === true && (
           <Fragment>
@@ -141,19 +185,19 @@ function App() {
               <Unity className="unity-canvas" unityContext={unityContext} />
             </div>
             {/* Displaying some output values */}
-            <p>
+            {/* <p>
               The cube is rotated <b>{cubeRotation}</b> degrees
               <br />
               The Unity app said <b>"{saidMessage}"</b>!
               <br />
               Clicked at <b>x{clickPosition.x}</b>, <b>y{clickPosition.y}</b>
-            </p>
+            </p> */}
           </Fragment>
         )}
-        <h6>
+        {/* <h6>
           Made with love by{" "}
           <a href="https://github.com/jeffreylanters">Jeffrey Lanters</a>
-        </h6>
+        </h6> */}
       </div>
     </Fragment>
   );

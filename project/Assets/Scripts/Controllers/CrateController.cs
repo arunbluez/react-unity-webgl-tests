@@ -19,6 +19,10 @@ public class CrateController : MonoBehaviour {
   public void SetRotationSpeed (float rotationSpeed) {
     this.rotationSpeed = rotationSpeed;
   }
+  
+    public void SetRotationSpeedArray (float[] rotationSpeed) {
+    this.rotationSpeed = rotationSpeed[0];
+  }
 
   public void StopRotation () {
     this.isRotating = false;
